@@ -7,6 +7,7 @@ pipeline {
     environment {
         appVersion = ""
         ACC_ID = "160885265516"
+        region = "us-east-1"
     }
     options {
         //disableConcurrentBuilds()
@@ -44,7 +45,7 @@ pipeline {
         stage('Build Image') {
             steps {
                script{
-                    withAWS(credentials: 'aws-creds', region: 'us-east-1') {
+                    withAWS(credentials: 'aws-creds', region: "${region}") {
                         // Commands here have AWS authentication
                         sh """
                             aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com
