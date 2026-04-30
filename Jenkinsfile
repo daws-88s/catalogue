@@ -169,7 +169,7 @@ pipeline {
                                 --format table \
                                 --exit-code 1 \
                                 --quiet \
-                                catalogue:latest
+                                ${ACC_ID}.dkr.ecr.${region}.amazonaws.com/roboshop/catalogue:${appVersion}
                         """,
                         returnStatus: true
                     )
