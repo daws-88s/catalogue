@@ -104,6 +104,20 @@ pipeline {
                 }
             }
         }
+        stage('Build Image') {
+            steps {
+               script{
+                    withAWS(credentials: 'aws-creds', region: "${region}") {
+                        // Commands here have AWS authentication
+                        sh """
+                            aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com
+                            docker build -t ${ACC_ID}.dkr.ecr.${region}.amazonaws.com/roboshop/catalogue:${appVersion} .
+                            docker push ${ACC_ID}.dkr.ecr.${region}.amazonaws.com/roboshop/catalogue:${appVersion}
+                        """
+                    }
+                }
+            }
+        }
         stage('Trivy OS Scan') {
             steps {
                 script {
@@ -116,7 +130,7 @@ pipeline {
                             --format table \
                             --output trivy-os-report.txt \
                             --exit-code 0 \
-                            catalogue:latest
+                            ${ACC_ID}.dkr.ecr.${region}.amazonaws.com/roboshop/catalogue:${appVersion}
                     """
 
                     // Generate HTML report
@@ -129,7 +143,7 @@ pipeline {
                             --template "@/usr/local/share/trivy/templates/html.tpl" \
                             --output trivy-os-report.html \
                             --exit-code 0 \
-                            catalogue:latest
+                            ${ACC_ID}.dkr.ecr.${region}.amazonaws.com/roboshop/catalogue:${appVersion}
                     """
 
                     // Print table to console
@@ -164,20 +178,6 @@ pipeline {
                         error "🚨 Trivy found HIGH/MEDIUM OS vulnerabilities. Pipeline failed. Check the Trivy OS Vulnerability Report."
                     } else {
                         echo "✅ No HIGH or MEDIUM OS vulnerabilities found. Pipeline continues."
-                    }
-                }
-            }
-        }
-        stage('Build Image') {
-            steps {
-               script{
-                    withAWS(credentials: 'aws-creds', region: "${region}") {
-                        // Commands here have AWS authentication
-                        sh """
-                            aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com
-                            docker build -t ${ACC_ID}.dkr.ecr.${region}.amazonaws.com/roboshop/catalogue:${appVersion} .
-                            docker push ${ACC_ID}.dkr.ecr.${region}.amazonaws.com/roboshop/catalogue:${appVersion}
-                        """
                     }
                 }
             }
