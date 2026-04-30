@@ -133,33 +133,10 @@ pipeline {
                             ${ACC_ID}.dkr.ecr.${region}.amazonaws.com/roboshop/catalogue:${appVersion}
                     """
 
-                    // Generate HTML report
-                    sh """
-                        trivy image \
-                            --scanners vuln \
-                            --pkg-types os \
-                            --severity HIGH,MEDIUM \
-                            --format template \
-                            --template "@/usr/local/share/trivy/templates/html.tpl" \
-                            --output trivy-os-report.html \
-                            --exit-code 0 \
-                            ${ACC_ID}.dkr.ecr.${region}.amazonaws.com/roboshop/catalogue:${appVersion}
-                    """
-
                     // Print table to console
                     sh 'cat trivy-os-report.txt'
 
-                    // Publish HTML report
-                    publishHTML(target: [
-                        allowMissing          : false,
-                        alwaysLinkToLastBuild : true,
-                        keepAll               : true,
-                        reportDir             : '.',
-                        reportFiles           : 'trivy-os-report.html',
-                        reportName            : 'Trivy OS Vulnerability Report'
-                    ])
-
-                    // Check for vulnerabilities and fail if found
+                    // Fail pipeline if vulnerabilities found
                     def scanResult = sh(
                         script: """
                             trivy image \
@@ -175,7 +152,7 @@ pipeline {
                     )
 
                     if (scanResult != 0) {
-                        error "🚨 Trivy found HIGH/MEDIUM OS vulnerabilities. Pipeline failed. Check the Trivy OS Vulnerability Report."
+                        error "🚨 Trivy found HIGH/MEDIUM OS vulnerabilities. Pipeline failed."
                     } else {
                         echo "✅ No HIGH or MEDIUM OS vulnerabilities found. Pipeline continues."
                     }
