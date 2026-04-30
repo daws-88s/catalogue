@@ -110,9 +110,8 @@ pipeline {
                     withAWS(credentials: 'aws-creds', region: "${region}") {
                         // Commands here have AWS authentication
                         sh """
-                            aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com
+                            
                             docker build -t ${ACC_ID}.dkr.ecr.${region}.amazonaws.com/roboshop/catalogue:${appVersion} .
-                            docker push ${ACC_ID}.dkr.ecr.${region}.amazonaws.com/roboshop/catalogue:${appVersion}
                         """
                     }
                 }
@@ -155,6 +154,52 @@ pipeline {
                         error "🚨 Trivy found HIGH/MEDIUM OS vulnerabilities. Pipeline failed."
                     } else {
                         echo "✅ No HIGH or MEDIUM OS vulnerabilities found. Pipeline continues."
+                    }
+                }
+            }
+        }
+        stage('Trivy Dockerfile Scan') 
+        {
+            steps {
+                script {
+                    sh """
+                        trivy config \
+                            --severity HIGH,MEDIUM \
+                            --format table \
+                            --output trivy-dockerfile-report.txt \
+                            Dockerfile
+                    """
+
+                    sh 'cat trivy-dockerfile-report.txt'
+
+                    def scanResult = sh(
+                        script: """
+                            trivy config \
+                                --severity HIGH,MEDIUM \
+                                --exit-code 1 \
+                                --format table \
+                                Dockerfile
+                        """,
+                        returnStatus: true
+                    )
+
+                    if (scanResult != 0) {
+                        error "🚨 Trivy found HIGH/MEDIUM misconfigurations in Dockerfile. Pipeline failed."
+                    } else {
+                        echo "✅ No HIGH or MEDIUM Dockerfile misconfigurations found. Pipeline continues."
+                    }
+                }
+            }
+        }
+        stage ('Push image to ECR'){
+            steps {
+               script{
+                    withAWS(credentials: 'aws-creds', region: "${region}") {
+                        // Commands here have AWS authentication
+                        sh """
+                            aws ecr get-login-password --region ${region} | docker login --username AWS --password-stdin ${ACC_ID}.dkr.ecr.us-east-1.amazonaws.com
+                            docker push ${ACC_ID}.dkr.ecr.${region}.amazonaws.com/roboshop/catalogue:${appVersion}
+                        """
                     }
                 }
             }
