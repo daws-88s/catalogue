@@ -1,15 +1,16 @@
-@Library('jenkins-test-library') _
 
 def configMap = [
-    project: "roboshop"
+    project: "roboshop",
     component: "catalogue"
 ]
 
 echo "Triggering the library pipeline"
 
 if ( env.BRANCH_NAME.equalsIgnoreCase('main') ){
-    echo "checking later"
+    configMap["jiraProject"] = "ROBO"
+    EKSMainPipeline(configMap)
 }
 else{
-    testPipeline(configMap)
+    configMap["jiraProject"] = "ROBO"
+    nodeJSEKSPipeline(configMap)
 }
